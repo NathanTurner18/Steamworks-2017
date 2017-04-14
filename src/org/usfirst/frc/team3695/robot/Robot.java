@@ -1,44 +1,85 @@
-
 package org.usfirst.frc.team3695.robot;
 
-import org.usfirst.frc.team3695.robot.commands.CommandDrive;
+import org.usfirst.frc.team3695.robot.auto.CommandGroupAuto;
+import org.usfirst.frc.team3695.robot.enumeration.Autonomous;
+import org.usfirst.frc.team3695.robot.enumeration.Camera;
+import org.usfirst.frc.team3695.robot.enumeration.Video;
+import org.usfirst.frc.team3695.robot.subsystems.SubsystemAscend;
+import org.usfirst.frc.team3695.robot.subsystems.SubsystemBling;
+import org.usfirst.frc.team3695.robot.subsystems.SubsystemCompressor;
 import org.usfirst.frc.team3695.robot.subsystems.SubsystemDrive;
+import org.usfirst.frc.team3695.robot.subsystems.SubsystemFuelFlaps;
+import org.usfirst.frc.team3695.robot.subsystems.SubsystemGearFlaps;
+import org.usfirst.frc.team3695.robot.vision.Vision;
 
 import edu.wpi.first.wpilibj.IterativeRobot;
-import edu.wpi.first.wpilibj.command.Command;
 import edu.wpi.first.wpilibj.command.Scheduler;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 /**
- * The VM is configured to automatically run this class, and to call the
- * functions corresponding to each mode, as described in the IterativeRobot
- * documentation. If you change the name of this class or the package after
- * creating this project, you must also update the manifest file in the resource
- * directory.
+ * Team 3695 Main Robot Function
+ * @author 3695
+ *
  */
 public class Robot extends IterativeRobot {
-
-	public static OI oi;
-
-	Command autonomousCommand;
-	SendableChooser<Command> chooser = new SendableChooser<>();
-	public static SubsystemDrive subsystemDrive;
-	Command commanderDrive;
+	//Choosers
+	SendableChooser<Autonomous> autoChooser = new SendableChooser<>();
+	SendableChooser<Camera> chooserCamera = new SendableChooser<>();
+	SendableChooser<Video> chooserVideo = new SendableChooser<>();
+	
+	//Subsystems
+	public static SubsystemDrive SUB_DRIVE;
+	public static SubsystemCompressor SUB_COMPRESSOR;
+	public static SubsystemGearFlaps SUB_GEAR_FLAPS;
+	public static SubsystemFuelFlaps SUB_FUEL_FLAPS;
+	public static SubsystemAscend SUB_ASCEND;
+	public static SubsystemBling SUB_BLINGY;
+	
+	//Output and Input
+	public static final Grip GRIP = new Grip();
+	public static final Vision VISION = new Vision();
+	
+	//Auto
+	private CommandGroupAuto auto;
 
 	/**
 	 * This function is run when the robot is first started up and should be
 	 * used for any initialization code.
 	 */
-	@Override
 	public void robotInit() {
-		oi = new OI();
-		subsystemDrive = new SubsystemDrive();
-		commanderDrive = new CommandDrive();
-		//chooser.addDefault("Default Auto", new ExampleCommand());
-		// chooser.addObject("My Auto", new MyAutoCommand());
-		SmartDashboard.putData("Auto mode", chooser);
+		
+		//Instantiate subsystems
+		SUB_DRIVE = new SubsystemDrive();
+		SUB_COMPRESSOR = new SubsystemCompressor();
+		SUB_GEAR_FLAPS = new SubsystemGearFlaps();
+		SUB_FUEL_FLAPS = new SubsystemFuelFlaps();
+		SUB_ASCEND = new SubsystemAscend();
+		SUB_BLINGY = new SubsystemBling();
+		
+		//Operator Interface
+		new OI();
+		
+		//Autonomous Chooser init
+		autoChooser.addDefault(Autonomous.NOTHING.toString(), Autonomous.NOTHING);
+		for(int i = 1; i < Autonomous.values().length; i++) {
+			autoChooser.addObject(Autonomous.values()[i].toString(), Autonomous.values()[i]);
+		}
+		SmartDashboard.putData("Auto Mode", autoChooser);
+		
+		//Camera Chooser init
+		chooserCamera.addDefault(Camera.FRONT.getUSB().getName(), Camera.FRONT);
+		chooserCamera.addObject(Camera.REAR.getUSB().getName(), Camera.REAR);
+		SmartDashboard.putData("Camera", chooserCamera);
+		
+		//Video mode chooser (ex to view GRIP)
+		chooserVideo.addDefault("Raw", Video.RAW);
+		chooserVideo.addObject("Low Exposure", Video.LOW_EXPOSURE);
+		chooserVideo.addObject("Threshhold", Video.THRESHHOLD);
+		SmartDashboard.putData("Video Mode", chooserVideo);
+		
+		VISION.start();
 	}
 
 	/**
@@ -46,65 +87,47 @@ public class Robot extends IterativeRobot {
 	 * You can use it to reset any subsystem information you want to clear when
 	 * the robot is disabled.
 	 */
-	@Override
 	public void disabledInit() {
 
 	}
 
-	@Override
 	public void disabledPeriodic() {
 		Scheduler.getInstance().run();
+		Camera cam = chooserCamera.getSelected();
+		Video video = chooserVideo.getSelected();
+		if (cam != null && video != null) {
+			VISION.setCamera(cam, video);
+		}
 	}
 
 	/**
-	 * This autonomous (along with the chooser code above) shows how to select
-	 * between different autonomous modes using the dashboard. The sendable
-	 * chooser code works with the Java SmartDashboard. If you prefer the
-	 * LabVIEW Dashboard, remove all of the chooser code and uncomment the
-	 * getString code to get the auto name from the text box below the Gyro
-	 *
-	 * You can add additional auto modes by adding additional commands to the
-	 * chooser code above (like the commented example) or additional comparisons
-	 * to the switch structure below with additional strings & commands.
+	 * Initializes autonomous control with a selection on the driver dash
 	 */
-	@Override
 	public void autonomousInit() {
-		autonomousCommand = chooser.getSelected();
-
-		/*
-		 * String autoSelected = SmartDashboard.getString("Auto Selector",
-		 * "Default"); switch(autoSelected) { case "My Auto": autonomousCommand
-		 * = new MyAutoCommand(); break; case "Default Auto": default:
-		 * autonomousCommand = new ExampleCommand(); break; }
-		 */
-
-		// schedule the autonomous command (example)
-		if (autonomousCommand != null)
-			autonomousCommand.start();
+		if(autoChooser.getSelected() != null) {
+			auto = new CommandGroupAuto(autoChooser.getSelected());
+			auto.start();
+		}
 	}
 
 	/**
 	 * This function is called periodically during autonomous
 	 */
-	@Override
 	public void autonomousPeriodic() {
 		Scheduler.getInstance().run();
 	}
-
-	@Override
+	
+	/**
+	 * This function is called once to initialize operator control
+	 */
 	public void teleopInit() {
-		// This makes sure that the autonomous stops running when
-		// teleop starts running. If you want the autonomous to
-		// continue until interrupted by another command, remove
-		// this line or comment it out.
-		if (autonomousCommand != null)
-			autonomousCommand.cancel();
+		if (auto != null)
+			auto.cancel();
 	}
 
 	/**
 	 * This function is called periodically during operator control
 	 */
-	@Override
 	public void teleopPeriodic() {
 		Scheduler.getInstance().run();
 	}
@@ -112,7 +135,6 @@ public class Robot extends IterativeRobot {
 	/**
 	 * This function is called periodically during test mode
 	 */
-	@Override
 	public void testPeriodic() {
 		LiveWindow.run();
 	}

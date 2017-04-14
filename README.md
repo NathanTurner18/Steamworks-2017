@@ -12,13 +12,14 @@ The FRC 2017 programming repository for team 3695
  - [ ] Flashing LED's
 
 ### Important Links
+ - [Program Team Website](https://redinquisitive.github.io/Steamworks-2017/)
  - [Eclipse Setup](https://wpilib.screenstepslive.com/s/4485/m/13809/l/599681-installing-eclipse-c-java)
  - [Group Assignment](/GROUPS.md)
 
 ### Contributors
  * Aaron Walter
  * That Kurt Feller²³ 
- * Colton Kreischer²
+ * Colton Kreischer
  * Jason Wilcox²
  * Juleah Richardson
  * Lizbeth Quiroz
@@ -29,3 +30,4 @@ The FRC 2017 programming repository for team 3695
  * Dylan Hampton
  * Grant Eads
  * Lily Jennings
+ * Max Gartung 

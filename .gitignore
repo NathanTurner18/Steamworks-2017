@@ -1,4 +1,5 @@
 /bin/
 /build/
-/.classpath
 /bin1/
+/sysProps.xml
+/dist
